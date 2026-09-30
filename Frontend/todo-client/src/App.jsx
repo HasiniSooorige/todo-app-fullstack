@@ -11,117 +11,345 @@ import {
     deleteTodo
 } from "./services/todoService";
 
+import "./App.css";
+
 function App() {
+
     const [todos, setTodos] = useState([]);
+
     const [loading, setLoading] = useState(true);
+
     const [error, setError] = useState("");
 
-    const loadTodos = async () => {
-        try {
-            setLoading(true);
+    const [searchTerm, setSearchTerm] = useState("");
 
-            const data = await getTodos();
+    const [filter, setFilter] = useState("all");
 
-            setTodos(data);
-        } catch (error) {
-            console.error(error);
-            setError("Failed to load todos");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const [editingTodo, setEditingTodo] = useState(null);
 
+    const [actionLoadingId, setActionLoadingId] = useState(null);
+
+
+    // Load todos
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        loadTodos();
+
+        let cancelled = false;
+
+        getTodos()
+            .then((data) => {
+
+                if (!cancelled) {
+                    setTodos(data);
+                    setError("");
+                    setLoading(false);
+                }
+
+            })
+            .catch((error) => {
+
+                console.error(error);
+
+                if (!cancelled) {
+                    setError(
+                        "Unable to load todos. Please make sure the API is running."
+                    );
+
+                    setLoading(false);
+                }
+
+            });
+
+        return () => {
+            cancelled = true;
+        };
+
     }, []);
 
-    const handleAdd = async (todo) => {
-        try {
-            const createdTodo = await createTodo(todo);
 
-            setTodos((currentTodos) => [
-                ...currentTodos,
-                createdTodo
-            ]);
+    // Add / Edit Todo
+    const handleSubmit = async (todoData) => {
+
+        try {
+
+            setError("");
+
+            if (editingTodo) {
+
+                const updatedTodo = await updateTodo(
+                    editingTodo.id,
+                    todoData
+                );
+
+                setTodos((currentTodos) =>
+                    currentTodos.map((todo) =>
+                        todo.id === editingTodo.id
+                            ? updatedTodo
+                            : todo
+                    )
+                );
+
+                setEditingTodo(null);
+
+            } else {
+
+                const newTodo = await createTodo(todoData);
+
+                setTodos((currentTodos) => [
+                    ...currentTodos,
+                    newTodo
+                ]);
+
+            }
+
         } catch (error) {
+
             console.error(error);
-            setError("Failed to create todo");
+
+            setError(
+                "Something went wrong while saving the todo."
+            );
+
+            throw error;
         }
     };
 
+
+    // Toggle todo
     const handleToggle = async (id) => {
+
         try {
+
+            setActionLoadingId(id);
+
+            setError("");
+
             await toggleTodo(id);
 
             setTodos((currentTodos) =>
                 currentTodos.map((todo) =>
                     todo.id === id
-                        ? { ...todo, done: !todo.done }
+                        ? {
+                            ...todo,
+                            done: !todo.done
+                        }
                         : todo
                 )
             );
+
         } catch (error) {
+
             console.error(error);
-            setError("Failed to update todo");
-        }
-    };
 
-    const handleEdit = async (id, todo) => {
-        try {
-            console.log("handleEdit called:", id, todo);
-
-            const updatedTodo = await updateTodo(id, todo);
-
-            setTodos((currentTodos) =>
-                currentTodos.map((item) =>
-                    item.id === id
-                        ? updatedTodo
-                        : item
-                )
+            setError(
+                "Failed to update todo status."
             );
-        } catch (error) {
-            console.error("Failed to edit todo:", error);
-            setError("Failed to update todo");
-            throw error;
+
+        } finally {
+
+            setActionLoadingId(null);
         }
     };
 
+
+    // Edit todo
+    const handleEdit = (todo) => {
+
+        setEditingTodo(todo);
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    };
+
+
+    // Delete todo
     const handleDelete = async (id) => {
+
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this todo?"
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
         try {
+
+            setActionLoadingId(id);
+
+            setError("");
+
             await deleteTodo(id);
 
             setTodos((currentTodos) =>
-                currentTodos.filter((todo) => todo.id !== id)
+                currentTodos.filter(
+                    (todo) => todo.id !== id
+                )
             );
+
+            if (editingTodo?.id === id) {
+                setEditingTodo(null);
+            }
+
         } catch (error) {
+
             console.error(error);
-            setError("Failed to delete todo");
+
+            setError(
+                "Failed to delete todo."
+            );
+
+        } finally {
+
+            setActionLoadingId(null);
         }
     };
 
+
+    // Cancel edit
+    const handleCancelEdit = () => {
+        setEditingTodo(null);
+    };
+
+
+    // Search + Filter
+    const filteredTodos = todos.filter((todo) => {
+
+        const matchesSearch =
+            todo.title
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase()) ||
+            todo.description
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase());
+
+        const matchesFilter =
+            filter === "all" ||
+            (filter === "completed" && todo.done) ||
+            (filter === "pending" && !todo.done);
+
+        return matchesSearch && matchesFilter;
+    });
+
+
     return (
         <div className="app">
-            <h1>Todo App</h1>
 
-            <p>React + .NET Full Stack Todo Application</p>
+            <header className="app-header">
 
-            {error && (
-                <p>{error}</p>
-            )}
+                <h1>Todo App</h1>
 
-            <TodoForm onAdd={handleAdd} />
+                <p>
+                    React + .NET Full Stack Todo Application
+                </p>
 
-            {loading ? (
-                <p>Loading todos...</p>
-            ) : (
-                    <TodoList
-                        todos={todos}
-                        onToggle={handleToggle}
-                        onDelete={handleDelete}
-                        onEdit={handleEdit}
+            </header>
+
+
+            <main className="container">
+
+                {/* Error */}
+                {error && (
+                    <div className="error-message">
+                        <span>{error}</span>
+
+                        <button
+                            onClick={() => setError("")}
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
+
+
+                {/* Form */}
+                <section className="form-card">
+
+                    <h2>
+                        {editingTodo
+                            ? "Edit Todo"
+                            : "Add New Todo"
+                        }
+                    </h2>
+
+                    <TodoForm
+                        onSubmit={handleSubmit}
+                        editingTodo={editingTodo}
+                        onCancelEdit={handleCancelEdit}
                     />
-            )}
+
+                </section>
+
+
+                {/* Search & Filter */}
+                <section className="toolbar">
+
+                    <input
+                        type="text"
+                        placeholder="Search todos..."
+                        value={searchTerm}
+                        onChange={(e) =>
+                            setSearchTerm(e.target.value)
+                        }
+                        className="search-input"
+                    />
+
+                    <select
+                        value={filter}
+                        onChange={(e) =>
+                            setFilter(e.target.value)
+                        }
+                        className="filter-select"
+                    >
+                        <option value="all">
+                            All
+                        </option>
+
+                        <option value="pending">
+                            Pending
+                        </option>
+
+                        <option value="completed">
+                            Completed
+                        </option>
+                    </select>
+
+                </section>
+
+
+                {/* Todo count */}
+                <div className="todo-summary">
+
+                    <span>
+                        Showing {filteredTodos.length} of {todos.length} todos
+                    </span>
+
+                </div>
+
+
+                {/* Loading */}
+                {loading ? (
+
+                    <div className="loading">
+                        <div className="spinner"></div>
+                        <p>Loading todos...</p>
+                    </div>
+
+                ) : (
+
+                    <TodoList
+                        todos={filteredTodos}
+                        onToggle={handleToggle}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        actionLoadingId={actionLoadingId}
+                    />
+
+                )}
+
+            </main>
+
         </div>
     );
 }

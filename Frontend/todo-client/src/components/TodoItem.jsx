@@ -1,95 +1,57 @@
-import { useState } from "react";
-
-function TodoItem({ todo, onToggle, onDelete, onEdit }) {
-    const [isEditing, setIsEditing] = useState(false);
-    const [title, setTitle] = useState(todo.title);
-    const [description, setDescription] = useState(todo.description);
-
-    const handleSave = async () => {
-        console.log("Save clicked");
-        console.log("Todo ID:", todo.id);
-        console.log("Title:", title);
-        console.log("Description:", description);
-
-        if (!title.trim()) {
-            return;
-        }
-
-        try {
-            await onEdit(todo.id, {
-                title: title,
-                description: description
-            });
-
-            setIsEditing(false);
-        } catch (error) {
-            console.error("Edit failed:", error);
-        }
-    };
-
-    const handleCancel = () => {
-        setTitle(todo.title);
-        setDescription(todo.description);
-        setIsEditing(false);
-    };
-
+function TodoItem({
+    todo,
+    onToggle,
+    onEdit,
+    onDelete,
+    actionLoading
+}) {
     return (
-        <div className="todo-item">
+        <div className={`todo-item ${todo.done ? "completed" : ""}`}>
 
-            {isEditing ? (
-                <>
-                    <input
-                        type="text"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                    />
+            <div className="todo-content">
 
-                    <input
-                        type="text"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                    />
+                <h3>{todo.title}</h3>
 
-                    <button type="button" onClick={handleSave}>
-                        Save
-                    </button>
+                <p>{todo.description}</p>
 
-                    <button type="button" onClick={handleCancel}>
-                        Cancel
-                    </button>
-                </>
-            ) : (
-                <>
-                    <h3>{todo.title}</h3>
+                <span className={`status ${todo.done ? "done" : "pending"}`}>
+                    {todo.done ? "Completed" : "Pending"}
+                </span>
 
-                    <p>{todo.description}</p>
+            </div>
 
-                    <p>
-                        Status: {todo.done ? "Completed" : "Pending"}
-                    </p>
+            <div className="todo-actions">
 
-                    <button
-                        type="button"
-                        onClick={() => onToggle(todo.id)}
-                    >
-                        {todo.done ? "Mark Pending" : "Mark Done"}
-                    </button>
+                <button
+                    onClick={() => onToggle(todo.id)}
+                    disabled={actionLoading}
+                    className="success-button"
+                >
+                    {actionLoading
+                        ? "..."
+                        : todo.done
+                            ? "Mark Pending"
+                            : "Mark Done"
+                    }
+                </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setIsEditing(true)}
-                    >
-                        Edit
-                    </button>
+                <button
+                    onClick={() => onEdit(todo)}
+                    disabled={actionLoading}
+                    className="edit-button"
+                >
+                    Edit
+                </button>
 
-                    <button
-                        type="button"
-                        onClick={() => onDelete(todo.id)}
-                    >
-                        Delete
-                    </button>
-                </>
-            )}
+                <button
+                    onClick={() => onDelete(todo.id)}
+                    disabled={actionLoading}
+                    className="delete-button"
+                >
+                    Delete
+                </button>
+
+            </div>
 
         </div>
     );

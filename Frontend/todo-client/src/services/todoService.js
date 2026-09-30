@@ -27,8 +27,6 @@ export const createTodo = async (todo) => {
 };
 
 export const updateTodo = async (id, todo) => {
-    console.log("PUT request:", id, todo);
-
     const response = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
         headers: {
@@ -44,7 +42,6 @@ export const updateTodo = async (id, todo) => {
     return await response.json();
 };
 
-
 export const toggleTodo = async (id) => {
     const response = await fetch(`${API_URL}/${id}/done`, {
         method: "PATCH"
@@ -52,7 +49,7 @@ export const toggleTodo = async (id) => {
 
     if (!response.ok) {
         throw new Error("Failed to update todo status");
-    };
+    }
 };
 
 export const deleteTodo = async (id) => {
