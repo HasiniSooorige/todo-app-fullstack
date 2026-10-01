@@ -442,6 +442,3 @@ The Todo application is fully implemented and tested.
 GitHub:
 
 [https://github.com/HasiniSooorige/todo-app-fullstack.git](https://github.com/HasiniSooorige/todo-app-fullstack.git)
-
-````
-
