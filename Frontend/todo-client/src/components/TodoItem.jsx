@@ -2,19 +2,30 @@ function TodoItem({
     todo,
     onToggle,
     onEdit,
-    onDelete,
-    actionLoading
+    onDelete
 }) {
     return (
-        <div className={`todo-item ${todo.done ? "completed" : ""}`}>
+        <div
+            className={`todo-card ${todo.done ? "todo-completed" : ""
+                }`}
+        >
 
-            <div className="todo-content">
+            <div className="todo-info">
 
-                <h3>{todo.title}</h3>
+                <h3 className={todo.done ? "completed-title" : ""}>
+                    {todo.title}
+                </h3>
 
-                <p>{todo.description}</p>
+                <p className="todo-description">
+                    {todo.description || "No description"}
+                </p>
 
-                <span className={`status ${todo.done ? "done" : "pending"}`}>
+                <span
+                    className={`status-badge ${todo.done
+                            ? "status-completed"
+                            : "status-pending"
+                        }`}
+                >
                     {todo.done ? "Completed" : "Pending"}
                 </span>
 
@@ -23,30 +34,22 @@ function TodoItem({
             <div className="todo-actions">
 
                 <button
+                    className="btn btn-success"
                     onClick={() => onToggle(todo.id)}
-                    disabled={actionLoading}
-                    className="success-button"
                 >
-                    {actionLoading
-                        ? "..."
-                        : todo.done
-                            ? "Mark Pending"
-                            : "Mark Done"
-                    }
+                    {todo.done ? "Mark Pending" : "Mark Done"}
                 </button>
 
                 <button
+                    className="btn btn-warning"
                     onClick={() => onEdit(todo)}
-                    disabled={actionLoading}
-                    className="edit-button"
                 >
                     Edit
                 </button>
 
                 <button
+                    className="btn btn-danger"
                     onClick={() => onDelete(todo.id)}
-                    disabled={actionLoading}
-                    className="delete-button"
                 >
                     Delete
                 </button>

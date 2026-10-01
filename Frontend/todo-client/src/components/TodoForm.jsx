@@ -1,142 +1,146 @@
 import { useEffect, useState } from "react";
 
-function TodoForm({ onSubmit, editingTodo, onCancelEdit }) {
+function TodoForm({
+    onCreate,
+    onUpdate,
+    editingTodo,
+    onCancelEdit
+}) {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [errors, setErrors] = useState({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [validationError, setValidationError] = useState("");
+
+    // When Edit button is clicked
     useEffect(() => {
         if (editingTodo) {
-            setTitle(editingTodo.title || "");
-            setDescription(editingTodo.description || "");
+            setTitle(editingTodo.title);
+            setDescription(editingTodo.description);
+            setValidationError("");
         } else {
             setTitle("");
             setDescription("");
+            setValidationError("");
         }
-
-        setErrors({});
     }, [editingTodo]);
 
-    const validate = () => {
-        const newErrors = {};
+    const handleSubmit = async (event) => {
+        event.preventDefault();
 
+        // -----------------------------
+        // Validation
+        // -----------------------------
         if (!title.trim()) {
-            newErrors.title = "Title is required";
-        } else if (title.trim().length < 3) {
-            newErrors.title = "Title must be at least 3 characters";
-        }
-
-        if (!description.trim()) {
-            newErrors.description = "Description is required";
-        }
-
-        setErrors(newErrors);
-
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        if (!validate()) {
+            setValidationError("Title is required.");
             return;
         }
 
-        setIsSubmitting(true);
-
-        try {
-            await onSubmit({
-                title: title.trim(),
-                description: description.trim()
-            });
-
-            if (!editingTodo) {
-                setTitle("");
-                setDescription("");
-            }
-        } catch (error) {
-            console.error("Form submission failed:", error);
-        } finally {
-            setIsSubmitting(false);
+        if (title.trim().length < 2) {
+            setValidationError(
+                "Title must contain at least 2 characters."
+            );
+            return;
         }
-    };
 
-    const handleCancel = () => {
-        setTitle("");
-        setDescription("");
-        setErrors({});
+        setValidationError("");
 
-        if (onCancelEdit) {
-            onCancelEdit();
+        const todoData = {
+            title: title.trim(),
+            description: description.trim()
+        };
+
+        if (editingTodo) {
+            await onUpdate({
+                id: editingTodo.id,
+                ...todoData
+            });
+        } else {
+            await onCreate(todoData);
+        }
+
+        // Clear form after create
+        if (!editingTodo) {
+            setTitle("");
+            setDescription("");
         }
     };
 
     return (
-        <form className="todo-form" onSubmit={handleSubmit}>
+        <div className="todo-form-card">
 
-            <div className="form-group">
-                <label>Title</label>
+            <h2>
+                {editingTodo ? "Edit Todo" : "Add New Todo"}
+            </h2>
 
-                <input
-                    type="text"
-                    placeholder="Enter todo title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                />
+            <form onSubmit={handleSubmit}>
 
-                {errors.title && (
-                    <span className="error-text">
-                        {errors.title}
-                    </span>
+                <div className="form-fields">
+
+                    <div className="form-group">
+                        <label>Title</label>
+
+                        <input
+                            type="text"
+                            placeholder="Enter todo title"
+                            value={title}
+                            onChange={(event) => {
+                                setTitle(event.target.value);
+                                setValidationError("");
+                            }}
+                            className={
+                                validationError
+                                    ? "input-error"
+                                    : ""
+                            }
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Description</label>
+
+                        <input
+                            type="text"
+                            placeholder="Enter description"
+                            value={description}
+                            onChange={(event) =>
+                                setDescription(event.target.value)
+                            }
+                        />
+                    </div>
+
+                    <div className="form-buttons">
+
+                        <button
+                            type="submit"
+                            className="btn btn-primary"
+                        >
+                            {editingTodo
+                                ? "Save Changes"
+                                : "Add Todo"}
+                        </button>
+
+                        {editingTodo && (
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={onCancelEdit}
+                            >
+                                Cancel
+                            </button>
+                        )}
+
+                    </div>
+
+                </div>
+
+                {validationError && (
+                    <div className="validation-error">
+                        {validationError}
+                    </div>
                 )}
-            </div>
 
-            <div className="form-group">
-                <label>Description</label>
-
-                <input
-                    type="text"
-                    placeholder="Enter description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                />
-
-                {errors.description && (
-                    <span className="error-text">
-                        {errors.description}
-                    </span>
-                )}
-            </div>
-
-            <div className="form-buttons">
-
-                <button
-                    type="submit"
-                    className="primary-button"
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting
-                        ? "Saving..."
-                        : editingTodo
-                            ? "Save Changes"
-                            : "Add Todo"
-                    }
-                </button>
-
-                {editingTodo && (
-                    <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={handleCancel}
-                        disabled={isSubmitting}
-                    >
-                        Cancel
-                    </button>
-                )}
-
-            </div>
-        </form>
+            </form>
+        </div>
     );
 }
 

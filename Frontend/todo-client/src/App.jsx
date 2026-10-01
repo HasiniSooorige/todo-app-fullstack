@@ -1,8 +1,4 @@
 import { useEffect, useState } from "react";
-
-import TodoForm from "./components/TodoForm";
-import TodoList from "./components/TodoList";
-
 import {
     getTodos,
     createTodo,
@@ -11,161 +7,115 @@ import {
     deleteTodo
 } from "./services/todoService";
 
+import TodoForm from "./components/TodoForm";
+import TodoList from "./components/TodoList";
+
 import "./App.css";
 
 function App() {
-
     const [todos, setTodos] = useState([]);
 
     const [loading, setLoading] = useState(true);
-
     const [error, setError] = useState("");
 
     const [searchTerm, setSearchTerm] = useState("");
-
     const [filter, setFilter] = useState("all");
 
     const [editingTodo, setEditingTodo] = useState(null);
 
-    const [actionLoadingId, setActionLoadingId] = useState(null);
-
-
-    // Load todos
-    useEffect(() => {
-
-        let cancelled = false;
-
-        getTodos()
-            .then((data) => {
-
-                if (!cancelled) {
-                    setTodos(data);
-                    setError("");
-                    setLoading(false);
-                }
-
-            })
-            .catch((error) => {
-
-                console.error(error);
-
-                if (!cancelled) {
-                    setError(
-                        "Unable to load todos. Please make sure the API is running."
-                    );
-
-                    setLoading(false);
-                }
-
-            });
-
-        return () => {
-            cancelled = true;
-        };
-
-    }, []);
-
-
-    // Add / Edit Todo
-    const handleSubmit = async (todoData) => {
-
+    // -----------------------------
+    // Load Todos
+    // -----------------------------
+    const loadTodos = async () => {
         try {
-
+            setLoading(true);
             setError("");
 
-            if (editingTodo) {
-
-                const updatedTodo = await updateTodo(
-                    editingTodo.id,
-                    todoData
-                );
-
-                setTodos((currentTodos) =>
-                    currentTodos.map((todo) =>
-                        todo.id === editingTodo.id
-                            ? updatedTodo
-                            : todo
-                    )
-                );
-
-                setEditingTodo(null);
-
-            } else {
-
-                const newTodo = await createTodo(todoData);
-
-                setTodos((currentTodos) => [
-                    ...currentTodos,
-                    newTodo
-                ]);
-
-            }
-
+            const data = await getTodos();
+            setTodos(data);
         } catch (error) {
-
-            console.error(error);
-
-            setError(
-                "Something went wrong while saving the todo."
-            );
-
-            throw error;
+            console.error("Failed to load todos:", error);
+            setError("Failed to load todos. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        loadTodos();
+    }, []);
 
-    // Toggle todo
-    const handleToggle = async (id) => {
-
+    // -----------------------------
+    // Create Todo
+    // -----------------------------
+    const handleCreateTodo = async (todo) => {
         try {
+            setError("");
 
-            setActionLoadingId(id);
+            const createdTodo = await createTodo(todo);
 
+            setTodos((previousTodos) => [
+                ...previousTodos,
+                createdTodo
+            ]);
+        } catch (error) {
+            console.error("Failed to create todo:", error);
+            setError("Failed to create todo. Please try again.");
+        }
+    };
+
+    // -----------------------------
+    // Update Todo
+    // -----------------------------
+    const handleUpdateTodo = async (todo) => {
+        try {
+            setError("");
+
+            const updatedTodo = await updateTodo(todo.id, {
+                title: todo.title,
+                description: todo.description
+            });
+
+            setTodos((previousTodos) =>
+                previousTodos.map((item) =>
+                    item.id === todo.id ? updatedTodo : item
+                )
+            );
+
+            setEditingTodo(null);
+        } catch (error) {
+            console.error("Failed to update todo:", error);
+            setError("Failed to update todo. Please try again.");
+        }
+    };
+
+    // -----------------------------
+    // Toggle Todo
+    // -----------------------------
+    const handleToggleTodo = async (id) => {
+        try {
             setError("");
 
             await toggleTodo(id);
 
-            setTodos((currentTodos) =>
-                currentTodos.map((todo) =>
+            setTodos((previousTodos) =>
+                previousTodos.map((todo) =>
                     todo.id === id
-                        ? {
-                            ...todo,
-                            done: !todo.done
-                        }
+                        ? { ...todo, done: !todo.done }
                         : todo
                 )
             );
-
         } catch (error) {
-
-            console.error(error);
-
-            setError(
-                "Failed to update todo status."
-            );
-
-        } finally {
-
-            setActionLoadingId(null);
+            console.error("Failed to update todo status:", error);
+            setError("Failed to update todo status. Please try again.");
         }
     };
 
-
-    // Edit todo
-    const handleEdit = (todo) => {
-
-        setEditingTodo(todo);
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-    };
-
-
-    // Delete todo
-    const handleDelete = async (id) => {
-
+    // -----------------------------
+    // Delete Todo
+    // -----------------------------
+    const handleDeleteTodo = async (id) => {
         const confirmed = window.confirm(
             "Are you sure you want to delete this todo?"
         );
@@ -175,181 +125,116 @@ function App() {
         }
 
         try {
-
-            setActionLoadingId(id);
-
             setError("");
 
             await deleteTodo(id);
 
-            setTodos((currentTodos) =>
-                currentTodos.filter(
-                    (todo) => todo.id !== id
-                )
+            setTodos((previousTodos) =>
+                previousTodos.filter((todo) => todo.id !== id)
             );
-
-            if (editingTodo?.id === id) {
-                setEditingTodo(null);
-            }
-
         } catch (error) {
-
-            console.error(error);
-
-            setError(
-                "Failed to delete todo."
-            );
-
-        } finally {
-
-            setActionLoadingId(null);
+            console.error("Failed to delete todo:", error);
+            setError("Failed to delete todo. Please try again.");
         }
     };
 
-
-    // Cancel edit
-    const handleCancelEdit = () => {
-        setEditingTodo(null);
-    };
-
-
+    // -----------------------------
     // Search + Filter
+    // -----------------------------
     const filteredTodos = todos.filter((todo) => {
+        const search = searchTerm.toLowerCase();
 
         const matchesSearch =
-            todo.title
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-            todo.description
-                .toLowerCase()
-                .includes(searchTerm.toLowerCase());
+            todo.title.toLowerCase().includes(search) ||
+            todo.description.toLowerCase().includes(search);
 
         const matchesFilter =
             filter === "all" ||
-            (filter === "completed" && todo.done) ||
-            (filter === "pending" && !todo.done);
+            (filter === "pending" && !todo.done) ||
+            (filter === "completed" && todo.done);
 
         return matchesSearch && matchesFilter;
     });
 
-
     return (
-        <div className="app">
+        <div className="app-container">
 
             <header className="app-header">
-
                 <h1>Todo App</h1>
-
-                <p>
-                    React + .NET Full Stack Todo Application
-                </p>
-
+                <p>React + .NET Full Stack Todo Application</p>
             </header>
 
+            <main className="app-content">
 
-            <main className="container">
-
-                {/* Error */}
+                {/* Error Message */}
                 {error && (
                     <div className="error-message">
                         <span>{error}</span>
 
-                        <button
-                            onClick={() => setError("")}
-                        >
-                            ×
+                        <button onClick={loadTodos}>
+                            Retry
                         </button>
                     </div>
                 )}
 
-
-                {/* Form */}
-                <section className="form-card">
-
-                    <h2>
-                        {editingTodo
-                            ? "Edit Todo"
-                            : "Add New Todo"
-                        }
-                    </h2>
-
-                    <TodoForm
-                        onSubmit={handleSubmit}
-                        editingTodo={editingTodo}
-                        onCancelEdit={handleCancelEdit}
-                    />
-
-                </section>
-
+                {/* Add / Edit Form */}
+                <TodoForm
+                    onCreate={handleCreateTodo}
+                    onUpdate={handleUpdateTodo}
+                    editingTodo={editingTodo}
+                    onCancelEdit={() => setEditingTodo(null)}
+                />
 
                 {/* Search & Filter */}
-                <section className="toolbar">
+                <div className="filter-section">
 
                     <input
                         type="text"
                         placeholder="Search todos..."
                         value={searchTerm}
-                        onChange={(e) =>
-                            setSearchTerm(e.target.value)
+                        onChange={(event) =>
+                            setSearchTerm(event.target.value)
                         }
                         className="search-input"
                     />
 
                     <select
                         value={filter}
-                        onChange={(e) =>
-                            setFilter(e.target.value)
+                        onChange={(event) =>
+                            setFilter(event.target.value)
                         }
                         className="filter-select"
                     >
-                        <option value="all">
-                            All
-                        </option>
-
-                        <option value="pending">
-                            Pending
-                        </option>
-
-                        <option value="completed">
-                            Completed
-                        </option>
+                        <option value="all">All</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
                     </select>
-
-                </section>
-
-
-                {/* Todo count */}
-                <div className="todo-summary">
-
-                    <span>
-                        Showing {filteredTodos.length} of {todos.length} todos
-                    </span>
 
                 </div>
 
+                {/* Todo Count */}
+                {!loading && todos.length > 0 && (
+                    <div className="todo-count">
+                        Showing {filteredTodos.length} of {todos.length} todos
+                    </div>
+                )}
 
                 {/* Loading */}
                 {loading ? (
-
-                    <div className="loading">
+                    <div className="loading-container">
                         <div className="spinner"></div>
                         <p>Loading todos...</p>
                     </div>
-
                 ) : (
-
                     <TodoList
                         todos={filteredTodos}
-                        onToggle={handleToggle}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        actionLoadingId={actionLoadingId}
+                        onToggle={handleToggleTodo}
+                        onEdit={setEditingTodo}
+                        onDelete={handleDeleteTodo}
                     />
-
                 )}
 
             </main>
-
         </div>
     );
 }

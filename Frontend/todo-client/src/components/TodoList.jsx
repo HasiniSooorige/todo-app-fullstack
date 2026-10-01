@@ -4,14 +4,22 @@ function TodoList({
     todos,
     onToggle,
     onEdit,
-    onDelete,
-    actionLoadingId
+    onDelete
 }) {
     if (todos.length === 0) {
         return (
             <div className="empty-state">
+
+                <div className="empty-icon">
+                    ✓
+                </div>
+
                 <h3>No todos found</h3>
-                <p>Try adding a new todo or changing your search.</p>
+
+                <p>
+                    Try adding a new todo or changing your search/filter.
+                </p>
+
             </div>
         );
     }
@@ -26,7 +34,6 @@ function TodoList({
                     onToggle={onToggle}
                     onEdit={onEdit}
                     onDelete={onDelete}
-                    actionLoading={actionLoadingId === todo.id}
                 />
             ))}
 
